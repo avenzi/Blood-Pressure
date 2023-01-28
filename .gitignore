@@ -3,4 +3,6 @@ venv
 
 
 *.csv
+*.html
+dates.py
 
