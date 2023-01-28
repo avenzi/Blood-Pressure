@@ -3,7 +3,7 @@
 This is a script I wrote to plot my blood pressure over time, which I get by exporting CSV files from Livongo.
 This means that the CSV format expected is for that site in particular.
 
-It has only been tested on Windows.
+It has only been tested on Windows with Python 3.11
 
 Readings taken within 1 hour of each other will be averaged together in the plot, so it is beneficial to take 4-5
 readings at a time each day.
