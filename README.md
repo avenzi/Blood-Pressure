@@ -31,3 +31,7 @@ Date,       Time,     Systolic, Diastolic, Heart Rate
 You can add markers on the time series indicating dates when a medication was started, stopped, changed, etc.
 
 Make a copy of `dates_template.py` and name it `dates.py`. Follow the format of the examples.
+
+### TODO
+- log into liveongo and automatically download the latest data
+- Allow a config file to specify custom CSV formats
