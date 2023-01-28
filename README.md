@@ -10,13 +10,12 @@ readings at a time each day.
 
 ### How to run
 1. Create a venv and install requirements
-2. Place CSV files in this directory
+2. Place CSV files in root directory of repo
 3. Run `blood_pressure.py`
 4. Profit
 
 
 ### Expected CSV format:
-
 
 This format is identical to the format exported by Livongo.
 Times are assumed to have no timezone information.
