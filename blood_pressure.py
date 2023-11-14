@@ -1,6 +1,7 @@
 import os, sys
 import pandas as pd
 import datetime as dt
+from dateutil import parser
 import pytz
 import numpy as np
 
@@ -16,8 +17,16 @@ except:
     DATES = []
 
 
+data_dir = "./data"
+
 # color of the grey scatter dots
 GREY_COLOR = "#CCCCCC"
+
+DATE = 0
+TIME = 1
+SYSTOLIC = 2
+DIASTOLIC = 3
+PULSE = 4
 
 
 # Bokeh time tick mark formatter
@@ -49,22 +58,35 @@ def fit(df, y):
 
 # Read all CSV files in this directory and convert to one big Pandas DataFrame
 df = pd.DataFrame()
-for file in os.listdir("./"):
+for file in os.listdir(data_dir):
     if file.endswith(".csv"):
         print(file, end=' ...')  # printing file name
-        file_df = pd.read_csv(file)
-        file_df = file_df[["Date", "Time", "Systolic", "Diastolic", "Heart Rate"]]
-        df = pd.concat([df, file_df])  # add to main dataframe
+        file_df = pd.read_csv(f"{data_dir}/{file}")
+
+        # rename the columns to common names
+        mapping = {
+            file_df.columns[DATE]: "date",
+            file_df.columns[TIME]: "time",
+            file_df.columns[SYSTOLIC]: 'systolic',
+            file_df.columns[DIASTOLIC]: 'diastolic',
+            file_df.columns[PULSE]: 'pulse'
+        }
+        file_df.rename(columns=mapping, inplace=True)
+
+        column_names = file_df.columns[:6]
+        file_df = file_df[column_names]
+        file_df.reset_index()
+        df = pd.concat([df, file_df], ignore_index=True)  # add to main dataframe
         print("[done]")
 
 # convert "Date" and "Time" columns to a single "datetime" column
 datetimes = []
 for i, row in df.iterrows():
     # read time strings and use UTC (default is to use local time)
-    datetime = dt.datetime.strptime(f"{row['Date']} {row['Time']}", '%m/%d/%Y %I:%M %p').replace(tzinfo=pytz.timezone('UTC'))
-    datetimes.append(datetime)
-df = df.drop(["Date", "Time"], axis="columns")  # remove Date and Time columns
-df.insert(0, "datetime", datetimes)  # add combined datetime column
+    d = parser.parse(f"{row['date']} {row['time']}").replace(tzinfo=pytz.timezone('UTC'))
+    datetimes.append(d)
+df["datetime"] = datetimes  # add combined datetime column
+
 
 # Sort by datetime
 df.sort_values("datetime", inplace=True)
@@ -92,9 +114,9 @@ for i in range(len(df)):  # iterate through rows
             if len(clump) > 1:  # multiple readings in the clump
                 clumped_df.loc[i] = {
                     "datetime": dt.datetime.utcfromtimestamp(np.average([r['datetime'].timestamp() for r in clump])).replace(tzinfo=pytz.timezone('UTC')),
-                    "Systolic": np.average([r['Systolic'] for r in clump]),
-                    "Diastolic": np.average([r['Diastolic'] for r in clump]),
-                    "Heart Rate": np.average([r['Heart Rate'] for r in clump])
+                    "systolic": np.average([r['systolic'] for r in clump]),
+                    "diastolic": np.average([r['diastolic'] for r in clump]),
+                    "pulse": np.average([r['pulse'] for r in clump])
                 }
             clump = []  # start a new clump
 
@@ -107,7 +129,7 @@ clumped_source = ColumnDataSource(clumped_df)  # clumped data
 # Blood Pressure Figure
 
 hovertool = HoverTool(
-    tooltips=[('', '@datetime{%I:%M %p}:  @Systolic / @Diastolic')],
+    tooltips=[('', '@datetime{%I:%M %p}:  @systolic / @diastolic')],
     formatters={'@datetime': 'datetime'}
 )
 
@@ -118,26 +140,26 @@ fig1 = figure(tools=['xpan', 'xwheel_zoom', 'reset', hovertool],
               height=500,  # width is dynamic
               width=2000,
               x_range=(df.iloc[0]["datetime"], df.iloc[-1]["datetime"]),  # set x-range to start and end of data (it gets messed up by the invisible legend lines)
-              y_range=(df['Diastolic'].min()-5, df['Systolic'].max()+5)   # give y-range a little buffer around min and max
+              y_range=(df['diastolic'].min()-5, df['systolic'].max()+5)   # give y-range a little buffer around min and max
 )
 fig1.xaxis.formatter = tick_formatter  # format x-axis time values
 
-fig1.circle(x='datetime', y='Systolic', source=source, fill_color=GREY_COLOR, line_color=None, size=7)  # raw scatter
-fig1.line(x='datetime', y='Systolic', source=clumped_source, color='red', line_width=5, legend_label="Systolic")  # clumped line
-fig1.circle(x='datetime', y='Systolic', source=clumped_source, fill_color='red', line_color="black", size=10)  # clumped scatter
+fig1.circle(x='datetime', y='systolic', source=source, fill_color=GREY_COLOR, line_color=None, size=7)  # raw scatter
+fig1.line(x='datetime', y='systolic', source=clumped_source, color='red', line_width=5, legend_label="Systolic")  # clumped line
+fig1.circle(x='datetime', y='systolic', source=clumped_source, fill_color='red', line_color="black", size=10)  # clumped scatter
 #x, y = fit(df, "Systolic")
 #fig1.line(x=x, y=y, line_color="red", line_width=5)
 
-fig1.circle(x='datetime', y='Diastolic', source=source, fill_color=GREY_COLOR, line_color=None, size=7)
-fig1.line(x='datetime', y='Diastolic', source=clumped_source, color='orange', line_width=5, legend_label="Diastolic")
-fig1.circle(x='datetime', y='Diastolic', source=clumped_source, fill_color='orange', line_color="black", size=10)
+fig1.circle(x='datetime', y='diastolic', source=source, fill_color=GREY_COLOR, line_color=None, size=7)
+fig1.line(x='datetime', y='diastolic', source=clumped_source, color='orange', line_width=5, legend_label="Diastolic")
+fig1.circle(x='datetime', y='diastolic', source=clumped_source, fill_color='orange', line_color="black", size=10)
 
 
 fig1.add_layout(fig1.legend[0], 'right')  # move legend to the right of the plot
 
 # 120/70 baselines
-sys_line  = Span(location=120, dimension='width', line_color='black', line_dash='dashed', line_width=3)
-dia_line  = Span(location=70, dimension='width', line_color='black', line_dash='dashed', line_width=3)
+sys_line = Span(location=120, dimension='width', line_color='black', line_dash='dashed', line_width=3)
+dia_line = Span(location=70, dimension='width', line_color='black', line_dash='dashed', line_width=3)
 fig1.line(x=0, y=0, color='black', line_width=3, line_dash="dashed", legend_label="120/70 baseline")  # invisible line for the legend
 fig1.add_layout(sys_line)
 fig1.add_layout(dia_line)
@@ -158,7 +180,7 @@ for info in DATES:
 # Heart Rate Figure
 
 hovertool = HoverTool(
-    tooltips=[('', '@datetime{%I:%M %p}:  @{Heart Rate}')],
+    tooltips=[('', '@datetime{%I:%M %p}:  @{pulse}')],
     formatters={'@datetime': 'datetime'}
 )
 
@@ -172,9 +194,9 @@ fig2 = figure(tools=['xpan', 'xwheel_zoom', 'reset', hovertool],
 
 fig2.xaxis.formatter = tick_formatter
 
-fig2.circle(x='datetime', y='Heart Rate', source=source, fill_color=GREY_COLOR, line_color=None, size=7)
-fig2.line(x='datetime', y='Heart Rate', source=clumped_source, color='green', line_width=5)
-fig2.circle(x='datetime', y='Heart Rate', source=clumped_source, fill_color='green', line_color="black", size=10)
+fig2.circle(x='datetime', y='pulse', source=source, fill_color=GREY_COLOR, line_color=None, size=7)
+fig2.line(x='datetime', y='pulse', source=clumped_source, color='green', line_width=5)
+fig2.circle(x='datetime', y='pulse', source=clumped_source, fill_color='green', line_color="black", size=10)
 
 
 # Mark dates from DATES dict
