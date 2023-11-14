@@ -1,7 +1,6 @@
 ### Introduction
 
-This is a script I wrote to plot my blood pressure over time, which I get by exporting CSV files from Livongo.
-This means that the CSV format expected is for that site in particular.
+This is a script I wrote to plot my blood pressure over time, which I get by exporting CSV files from my blood pressure device.
 
 It has only been tested on Windows with Python 3.11
 
@@ -17,7 +16,6 @@ readings at a time each day.
 
 ### Expected CSV format:
 
-This format is identical to the format exported by Livongo.
 Times are assumed to have no timezone information.
 Spacing is irrelevant.
 ```
